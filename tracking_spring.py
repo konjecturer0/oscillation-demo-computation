@@ -59,13 +59,20 @@ term_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
 # fourcc = cv2.VideoWriter_fourcc(*'MJPG')
 # out = cv2.VideoWriter('detection-spring-final.avi', fourcc, 29.970662, (406, 720), True)
 
+
+
 xs_equilibrium_queue = queue.Queue()
 ys_equilibrium_queue = queue.Queue()
 
+res = []
+
+event = threading.Event()
+
 class ThreadingEquilibrium(threading.Thread):
 
-    def __init__(self, xs_equilibrium_queue, ys_equilibrium_queue):
+    def __init__(self, xs_equilibrium_queue, ys_equilibrium_queue, res):
         super().__init__()
+        self.res = []
         self.xs_equilibrium_queue = xs_equilibrium_queue
         self.ys_equilibrium_queue = ys_equilibrium_queue
 
@@ -77,7 +84,20 @@ class ThreadingEquilibrium(threading.Thread):
             xs.append(xpos)
             ypos = self.ys_equilibrium_queue.get()
             ys.append(ypos)
-            print("XS LIST>", xs, "YS LIST>", ys)
+            # print("XS LIST>", xs, "YS LIST>", ys)
+            min_x = min(xs)
+            max_x = max(xs)
+            min_y = min(ys)
+            max_y = max(ys)
+            final_pos_x = (min_x + max_x) / 2
+            final_pos_y = (min_y + max_y) / 2
+            res.clear()
+            res.append(final_pos_x)
+            res.append(final_pos_y)
+
+eqThread = ThreadingEquilibrium(xs_equilibrium_queue, ys_equilibrium_queue, res)
+eqThread.setDaemon(True)
+eqThread.start()
 
 # def equilibrium(x, y):
 #     start_time = time.clock()
@@ -98,9 +118,7 @@ class ThreadingEquilibrium(threading.Thread):
 #     return (posx, posy)
 #         # time.sleep(100)
 
-equilibrium = ThreadingEquilibrium(xs_equilibrium_queue, ys_equilibrium_queue)
-equilibrium.setDaemon(True)
-equilibrium.start()
+
 
 # Start looping
 while True:
@@ -143,10 +161,20 @@ while True:
     x_pos, y_pos = top_left_coordinates
 
     # print("Coordinates:", "X:", x_pos, "Y:", y_pos)
-    
+
     xs_equilibrium_queue.put(x_pos)
     ys_equilibrium_queue.put(y_pos)
 
+
+    f = tuple(res)
+
+    if len(f) == 0:
+        pass
+    else:
+        e_x, e_y = f
+        cv2.circle(frame, (int(e_x), int(e_y)), 3, (0, 255, 0), -1)
+    
+    
     '''
     [TODO]
     e_x, e_y = equilibrium(x_pos, y_pos)

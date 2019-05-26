@@ -59,12 +59,16 @@ term_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
 # fourcc = cv2.VideoWriter_fourcc(*'MJPG')
 # out = cv2.VideoWriter('detection-spring-final.avi', fourcc, 29.970662, (406, 720), True)
 
-
-
 xs_equilibrium_queue = queue.Queue()
 ys_equilibrium_queue = queue.Queue()
 
+amplitude_y_queue = queue.Queue()
+
+second_ys_queue = queue.Queue()
+
 res = []
+
+amplitude = 0
 
 event = threading.Event()
 
@@ -95,31 +99,61 @@ class ThreadingEquilibrium(threading.Thread):
             res.append(final_pos_x)
             res.append(final_pos_y)
 
+
+ys = []
+
+class ComputeAmplitude(threading.Thread):
+
+    def __init__(self, amplitude_y_queue, amplitude, second_ys_queue, ys):
+        super().__init__()
+        self.amplitude = amplitude
+        self.amplitude_y_queue = amplitude_y_queue
+        self.second_ys_queue = second_ys_queue
+
+    def run(self):
+        while True:
+            ypos = self.second_ys_queue.get()
+            ys.append(ypos)
+            # print(ys)
+        #     y_final_pos = self.amplitude_y_queue.get() # 415 eq
+        #     print("[1]", min_y, "[2]", min(ys))
+        #     if min_y > min(ys):
+        #         min_y = min(ys)
+        #         # print("MINI>>>>>", min_y)
+        #     else:
+        #         continue
+        #     # print("MINI>>>>>", min_y)
+        #     # print("AM>>", amplitude, "[cm]")
+        #     '''
+        #     else if min_y == min(self.ys):
+        #     '''
+        # eq = y_final_pos
+        # distancePixels = eq - min_y
+        # # print(distancePixels, "px")
+        # amplitude = distancePixels * 2.54/72
+
 eqThread = ThreadingEquilibrium(xs_equilibrium_queue, ys_equilibrium_queue, res)
 eqThread.setDaemon(True)
 eqThread.start()
 
-# def equilibrium(x, y):
-#     start_time = time.clock()
-#     print(start_time)
-#     xs = []
-#     ys = []
-#     for i in range(0, 10):
-#         xs.append(x)
-#         ys.append(y)
-#     print("XS LIST>", xs, "YS LIST>", ys)
-#     min_x = min(xs)
-#     max_x = max(xs)
-#     min_y = min(ys)
-#     max_y = max(ys)
-#     posx = (min_x + max_x) / 2
-#     posy = (min_y + max_y) / 2
-#     # print("EQ X>", posx, "EQ Y", posy)
-#     return (posx, posy)
-#         # time.sleep(100)
 
+amp = queue.Queue()
 
+def get_amplitude(ys_list):
+    if len(ys_list) == 0:
+        pass
+    else:
+        min_y = min(ys_list) # 313
+        equilibrium = amplitude_y_queue.get() # 415
+        distancePixels = equilibrium - min_y
+        amplitude = distancePixels * 2.54/72
+        return amplitude
+    
 
+def displacement(time):
+    x = amplitude * np.sin(w * time)
+    
+    
 # Start looping
 while True:
     
@@ -164,6 +198,8 @@ while True:
 
     xs_equilibrium_queue.put(x_pos)
     ys_equilibrium_queue.put(y_pos)
+    second_ys_queue.put(y_pos)
+    
 
 
     f = tuple(res)
@@ -172,16 +208,27 @@ while True:
         pass
     else:
         e_x, e_y = f
+        amplitude_y_queue.put(e_y)
+        # print("EQ>>", e_y)
         cv2.circle(frame, (int(e_x), int(e_y)), 3, (0, 255, 0), -1)
-    
-    
-    '''
-    [TODO]
-    e_x, e_y = equilibrium(x_pos, y_pos)
 
-    cv2.circle(frame, (int(e_x), int(e_y)), 3, (0, 255, 0), -1)
-    '''
 
+    ampThread = ComputeAmplitude(amplitude_y_queue, amplitude, second_ys_queue, ys)
+    ampThread.setDaemon(True)
+    ampThread.start()
+
+    get_amp_Thread = threading.Thread(target=lambda q, arg1: q.put(get_amplitude(arg1)), args=(amp, ys))
+    get_amp_Thread.setDaemon(True)
+    get_amp_Thread.start()
+
+    if amp.qsize() == 0:
+        pass
+    else:
+        amplitude = amp.get() # centimeters [cm]
+        print("AMP [*]>", amplitude, "cm")
+        
+
+    # print("AMP [2]", amplitude, "[cm]")
     
     cv2.imshow("Frame", frame)
     # cv2.imshow("Mask", mask)
@@ -191,12 +238,6 @@ while True:
 
     if key == ord('q'):
         break
-
-
-
-
-def displacement(time):
-    x = amplitude * np.sin(w * time)
 
 vs.release()
 # out.release()

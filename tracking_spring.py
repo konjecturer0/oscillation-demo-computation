@@ -114,23 +114,6 @@ class ComputeAmplitude(threading.Thread):
         while True:
             ypos = self.second_ys_queue.get()
             ys.append(ypos)
-            # print(ys)
-        #     y_final_pos = self.amplitude_y_queue.get() # 415 eq
-        #     print("[1]", min_y, "[2]", min(ys))
-        #     if min_y > min(ys):
-        #         min_y = min(ys)
-        #         # print("MINI>>>>>", min_y)
-        #     else:
-        #         continue
-        #     # print("MINI>>>>>", min_y)
-        #     # print("AM>>", amplitude, "[cm]")
-        #     '''
-        #     else if min_y == min(self.ys):
-        #     '''
-        # eq = y_final_pos
-        # distancePixels = eq - min_y
-        # # print(distancePixels, "px")
-        # amplitude = distancePixels * 2.54/72
 
 eqThread = ThreadingEquilibrium(xs_equilibrium_queue, ys_equilibrium_queue, res)
 eqThread.setDaemon(True)
@@ -149,12 +132,42 @@ def get_amplitude(ys_list):
         amplitude = distancePixels * 2.54/72
         return amplitude
     
+lock = threading.Lock()
 
-def displacement(time):
+time_elapsed = 0
+op = 0
+sw1 = True
+
+# def get_timePeriod(objPos, ys_list):
+#     global time_elapsed
+#     global op
+#     global lock
+#     global sw1
+#     global frameOP
+#     # end_timing = time.perf_counter()
+#     # print(end_timing)
+#     print("POSOTIO", objPos)
+#     if objPos == max(ys_list):
+#         op += 1
+#     elif objPos == min(ys_list):
+#         op += 1
+    
+#     # print("~~~~~~~~~~~~~~~~~~~", op)
+
+#     if op >= 3:
+#         time_elapsed = frameOP - 216
+#         sw1 = False
+
+
+def displacement(amplitude, time):
     x = amplitude * np.sin(w * time)
     
-    
-# Start looping
+
+
+
+frameOP = 0
+
+# [TODO] Start looping
 while True:
     
     _, frame = vs.read()
@@ -225,16 +238,38 @@ while True:
         pass
     else:
         amplitude = amp.get() # centimeters [cm]
-        print("AMP [*]>", amplitude, "cm")
+        # print("AMP [*]>", amplitude, "cm")
         
 
     # print("AMP [2]", amplitude, "[cm]")
+    # Another value 8.59 for time!
+    # start_time = time.perf_counter()
+    # print(start_time)
+    # if frameOP >= 214:
+    #     if sw1:
+    #         # d = str(start_time)
+    #         # first_timing = d[::]
+    #         # first_timing = float(first_timing)
+    #         # # print(first_timing)
+    #         periodThread = threading.Thread(target=get_timePeriod, args=(y_pos, ys))
+    #         periodThread.setDaemon(True)
+    #         periodThread.start()
+            
+    # print(start_time) # [TODO] ~3.4 Starting point
+
+    # print("[+] PERIOD", time_elapsed)
+    
+    '''
+    30 FRAMES PER SEC => 1 sec
+    '''
     
     cv2.imshow("Frame", frame)
+    # frameOP += 1
+    # print("OP", frameOP)
     # cv2.imshow("Mask", mask)
     # out.write(frame)
     
-    key = cv2.waitKey(120) & 0xFF
+    key = cv2.waitKey(30) & 0xFF
 
     if key == ord('q'):
         break

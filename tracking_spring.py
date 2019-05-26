@@ -7,6 +7,8 @@ import imutils
 import time
 import cv2
 import numpy as np
+import threading
+import queue
 
 '''
 Step #1: Detect the presence of a colored ball using computer vision techniques.
@@ -44,9 +46,6 @@ Array Color Data:
 
 vs = cv2.VideoCapture('video\\spring-system.mp4')
 
-time.sleep(2.0)
-
-
 x = 122
 y = 445
 
@@ -60,6 +59,48 @@ term_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
 # fourcc = cv2.VideoWriter_fourcc(*'MJPG')
 # out = cv2.VideoWriter('detection-spring-final.avi', fourcc, 29.970662, (406, 720), True)
 
+xs_equilibrium_queue = queue.Queue()
+ys_equilibrium_queue = queue.Queue()
+
+class ThreadingEquilibrium(threading.Thread):
+
+    def __init__(self, xs_equilibrium_queue, ys_equilibrium_queue):
+        super().__init__()
+        self.xs_equilibrium_queue = xs_equilibrium_queue
+        self.ys_equilibrium_queue = ys_equilibrium_queue
+
+    def run(self):
+        xs = []
+        ys = []
+        while True:
+            xpos = self.xs_equilibrium_queue.get()
+            xs.append(xpos)
+            ypos = self.ys_equilibrium_queue.get()
+            ys.append(ypos)
+            print("XS LIST>", xs, "YS LIST>", ys)
+
+# def equilibrium(x, y):
+#     start_time = time.clock()
+#     print(start_time)
+#     xs = []
+#     ys = []
+#     for i in range(0, 10):
+#         xs.append(x)
+#         ys.append(y)
+#     print("XS LIST>", xs, "YS LIST>", ys)
+#     min_x = min(xs)
+#     max_x = max(xs)
+#     min_y = min(ys)
+#     max_y = max(ys)
+#     posx = (min_x + max_x) / 2
+#     posy = (min_y + max_y) / 2
+#     # print("EQ X>", posx, "EQ Y", posy)
+#     return (posx, posy)
+#         # time.sleep(100)
+
+equilibrium = ThreadingEquilibrium(xs_equilibrium_queue, ys_equilibrium_queue)
+equilibrium.setDaemon(True)
+equilibrium.start()
 
 # Start looping
 while True:
@@ -90,26 +131,40 @@ while True:
 
     _, track_window = cv2.meanShift(mask, (x, y, width, height), term_criteria)
     x, y, w, h = track_window
+
     padding = 30
     padding_bottom = 35
-    cv2.rectangle(frame, (x, (y - padding)), (x + w, y + h - padding_bottom), (0, 255, 0), 2)
+
+    top_left_coordinates = (x, (y - padding))
+
+    cv2.rectangle(frame, (top_left_coordinates), (x + w, y + h - padding_bottom), (0, 255, 0), 2)
 
 
+    x_pos, y_pos = top_left_coordinates
 
-    # print("Coordinates:", "X:", x, "Y:", y)
-    print("Coordinates:", "W:", w, "H:", h)
+    # print("Coordinates:", "X:", x_pos, "Y:", y_pos)
+    
+    xs_equilibrium_queue.put(x_pos)
+    ys_equilibrium_queue.put(y_pos)
 
-    # if y 
+    '''
+    [TODO]
+    e_x, e_y = equilibrium(x_pos, y_pos)
+
+    cv2.circle(frame, (int(e_x), int(e_y)), 3, (0, 255, 0), -1)
+    '''
 
     
     cv2.imshow("Frame", frame)
-    cv2.imshow("Mask", mask)
+    # cv2.imshow("Mask", mask)
     # out.write(frame)
     
-    key = cv2.waitKey(60) & 0xFF
+    key = cv2.waitKey(120) & 0xFF
 
     if key == ord('q'):
         break
+
+
 
 
 def displacement(time):

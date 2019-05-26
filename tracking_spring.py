@@ -19,11 +19,11 @@ def nothing(x):
 
 cv2.namedWindow("Tracking")
 cv2.createTrackbar("LH", "Tracking", 0, 255, nothing) # Lower Hue
-cv2.createTrackbar("LS", "Tracking", 55, 255, nothing) # Lower Saturation
-cv2.createTrackbar("LV", "Tracking", 72, 255, nothing) # Lower Value
-cv2.createTrackbar("UH", "Tracking", 56, 255, nothing) # Upper Hue
-cv2.createTrackbar("US", "Tracking", 111, 255, nothing) # Upper Saturation    
-cv2.createTrackbar("UV", "Tracking", 212, 255, nothing) # Upper Value
+cv2.createTrackbar("LS", "Tracking", 49, 255, nothing) # Lower Saturation
+cv2.createTrackbar("LV", "Tracking", 42, 255, nothing) # Lower Value
+cv2.createTrackbar("UH", "Tracking", 63, 255, nothing) # Upper Hue
+cv2.createTrackbar("US", "Tracking", 107, 255, nothing) # Upper Saturation    
+cv2.createTrackbar("UV", "Tracking", 150, 255, nothing) # Upper Value
 
 
 '''
@@ -51,14 +51,14 @@ x = 122
 y = 445
 
 # Dimensions 77 x 72
-width = 77
-height = 72
+width = 60
+height = 180
 
 term_criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
 
 # Output
-fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-out = cv2.VideoWriter('detection-spring-final.avi', fourcc, 29.970662, (406, 720), True)
+# fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+# out = cv2.VideoWriter('detection-spring-final.avi', fourcc, 29.970662, (406, 720), True)
 
 
 # Start looping
@@ -90,19 +90,31 @@ while True:
 
     _, track_window = cv2.meanShift(mask, (x, y, width, height), term_criteria)
     x, y, w, h = track_window
-    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    padding = 30
+    padding_bottom = 35
+    cv2.rectangle(frame, (x, (y - padding)), (x + w, y + h - padding_bottom), (0, 255, 0), 2)
+
+
+
+    # print("Coordinates:", "X:", x, "Y:", y)
+    print("Coordinates:", "W:", w, "H:", h)
+
+    # if y 
 
     
     cv2.imshow("Frame", frame)
     cv2.imshow("Mask", mask)
-    out.write(frame)
+    # out.write(frame)
     
-    key = cv2.waitKey(30) & 0xFF
+    key = cv2.waitKey(60) & 0xFF
 
     if key == ord('q'):
         break
 
 
+def displacement(time):
+    x = amplitude * np.sin(w * time)
+
 vs.release()
-out.release()
+# out.release()
 cv2.destroyAllWindows()

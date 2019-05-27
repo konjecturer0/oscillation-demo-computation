@@ -369,16 +369,17 @@ def doplot(job_1_y, job_1_x):
 
 
 def gr(graphQ_X, graphQ_Y):
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    ax.spines['left'].set_position(('data', 0.0))
-    # ax.spines['bottom'].set_position(('data', 0.0))
-    ax.spines['right'].set_color('none')
-    ax.spines['top'].set_color('none')
-    
     xs = []
     ys = []
+    fig = plt.figure()
+    # ax = fig.add_subplot(1, 1, 1)
+    ax = plt.axes(xlim=(0, 500), ylim=(0, 500)) 
+    l, = ax.plot([], [], 'r-', label="Displacement")
 
+    # ax.spines['left'].set_position(('data', 0.0))
+    # # ax.spines['bottom'].set_position(('data', 0.0))
+    # ax.spines['right'].set_color('none')
+    # ax.spines['top'].set_color('none')
     def animate(i):
         
 
@@ -388,11 +389,12 @@ def gr(graphQ_X, graphQ_Y):
         ys.append(y)
 
         print(np.array(ys))
-        
+        l.set_data(np.array(xs), np.array(ys))
+        return l,
         # ax.clear()
-        ax.plot(np.array(xs), np.array(ys), "r-o")
+        
 
-    ani = animation.FuncAnimation(fig, animate, interval=100)
+    line_ani = animation.FuncAnimation(fig, animate, 5000, interval=50, blit=True, repeat=False)
 
     plt.gca().invert_yaxis()
     # ax.gca().invert_yaxis()

@@ -386,14 +386,16 @@ def gr(graphQ_X, graphQ_Y):
         y = graphQ_Y.get()
         xs.append(x)
         ys.append(y)
-        
-        ax.clear()
-        # ax.gca().invert_yaxis()
-        ax.plot(xs, ys, "b-*")
 
-    ani = animation.FuncAnimation(fig, animate, frames=30, interval=100)
+        print(np.array(ys))
+        
+        # ax.clear()
+        ax.plot(np.array(xs), np.array(ys), "r-o")
+
+    ani = animation.FuncAnimation(fig, animate, interval=100)
 
     plt.gca().invert_yaxis()
+    # ax.gca().invert_yaxis()
     plt.show()
 
 

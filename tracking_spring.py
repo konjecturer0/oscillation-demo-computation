@@ -128,14 +128,12 @@ def main():
             frame = 0
             
             while True:
-                # print(job_1_y)
                 frame += 1
                 ypos = self.second_ys_queue.get()
                 xpos = self.second_xs_queue.get()
                 self.ys.append(ypos)
                 job_1_x.put(frame)
                 job_1_y.put(ypos)
-                # print(ypos)
                 self.xs.append(xpos)
     
 
@@ -148,27 +146,6 @@ def main():
     computeCoordinates.setDaemon(True)
     computeCoordinates.start()
 
-    # class PlotCoordinates(threading.Thread):
-        
-    #     def __init__(self, coordY, time):
-    #         super().__init__()
-    #         self.coordY = np.array(coordY)
-    #         self.t = time
-    #         self.fig = plt.figure()
-    #         self.ax = self.fig.add_subplot(1, 1, 1)
-
-    #     def animate(self, i):
-    #         self.ax.clear()
-    #         self.ax.plot(self.t, self.coordY)
-
-    #     def run(self):
-    #         while True:
-    #             print(self.coordY)
-    #             ani = animation.FuncAnimation(self.fig, self.animate, interval=1000)
-
-    
-    
-    
 
 
     
@@ -282,8 +259,8 @@ def main():
         else:
             e_x, e_y = f
             amplitude_y_queue.put(e_y)
-            # print("EQ>>", e_y)
-            cv2.circle(frame, (int(e_x), int(e_y)), 3, (0, 255, 0), -1)
+            # print("Equilibrium>>", e_y)
+            cv2.circle(frame, (int(e_x), int(e_y)), 6,  (255, 255, 0), -1)
 
         # get_amp_Thread = threading.Thread(target=lambda q, arg1: q.put(get_amplitude(arg1)), args=(amp, ys))
         # get_amp_Thread.setDaemon(True)
@@ -371,38 +348,149 @@ def doplot(job_1_y, job_1_x):
 def gr(graphQ_X, graphQ_Y):
     xs = []
     ys = []
-    fig = plt.figure()
+    fig = plt.figure(1)
     # ax = fig.add_subplot(1, 1, 1)
-    ax = plt.axes(xlim=(0, 500), ylim=(0, 500)) 
-    l, = ax.plot([], [], 'r-', label="Displacement")
+    ax = plt.axes(xlim=(0, 30), ylim=(10, 19))
+    displacement, = ax.plot([], [], 'r-', label="[Weg Graph] | Displacement")
+    ''' a = -w^2*x
+    for acceleration we need position and time
+    '''
+    figAcc = plt.figure(2)
+    ax2 = plt.axes(xlim=(0, 30), ylim=(-260, 260))
+    acceleration, = ax2.plot([], [], 'b-', label="[Beschleunigung] | Acceleration")
+
+    figVelo = plt.figure(3)
+    ax3 = plt.axes(xlim=(0, 30), ylim=(-35, 35))
+    velocity, = ax3.plot([], [], 'y-', label="[Geschwindigkeit] | Velocity")
+
 
     # ax.spines['left'].set_position(('data', 0.0))
-    # # ax.spines['bottom'].set_position(('data', 0.0))
+    # ax.spines['bottom'].set_position(('data', 0.0))
     # ax.spines['right'].set_color('none')
     # ax.spines['top'].set_color('none')
+    ays = []
+    t = 0.722
+    f = 1/t
+    w = 2*np.pi*f
+    # w_def = 8.6664
+    amplitude = 3.32 # [TODO] Determine this value by passing file.txt with later amplitude (px)
+    # time = np.linspace(0, 100, 300)
+    forA = queue.Queue()
     def animate(i):
-        
 
         x = graphQ_X.get()
         y = graphQ_Y.get()
+
+        y = y * 2.54 / 72   # Centimeters
+        x = x/30            # Time [sec]
+
+        forA.put(x)
+
         xs.append(x)
         ys.append(y)
 
-        print(np.array(ys))
-        l.set_data(np.array(xs), np.array(ys))
-        return l,
-        # ax.clear()
+        # dis = amplitude * np.sin(w*x)
+        # displacementProof.append(dis)
         
+        # -amplitude * w**2 * np.sin(x*w)
+        # a = -w**2 * y
+        # print(a)
+        # ays.append(a)
+
+
+        # print(np.array(ays))
+        # print(np.array(xs))
+        displacement.set_data(np.array(xs), np.array(ys))
+        # acceleration.set_data(np.array(xs), np.array(ays))
+        return displacement,
+        # ax.clear()
+    
+    x_lAcc = []
+    y_lAcc = []
+    veloQe = queue.Queue()
+    def accG(i):
+
+        xAcc = forA.get()
+
+        veloQe.put(xAcc)
+
+        x_lAcc.append(xAcc)
+
+        a = -amplitude * w**2 * np.sin(xAcc*w)
+
+        y_lAcc.append(a)
+
+        acceleration.set_data(np.array(x_lAcc), np.array(y_lAcc))
+
+        return acceleration,
+
+    x_lVelo = []
+    y_lVelo = []
+    def veloAni(i):
+
+        v_X = veloQe.get()
+
+        x_lVelo.append(v_X)
+
+        v = w*amplitude*np.cos(w*v_X)
+
+        y_lVelo.append(v)
+
+        velocity.set_data(np.array(x_lVelo), np.array(y_lVelo))
+
+        return velocity,
+
+
 
     line_ani = animation.FuncAnimation(fig, animate, 5000, interval=50, blit=True, repeat=False)
+    accAnim = animation.FuncAnimation(figAcc, accG, 5000, interval=50, blit=True, repeat=False)
+    veloAni = animation.FuncAnimation(figVelo, veloAni, 5000, interval=50, blit=True, repeat=False)
 
+    plt.figure(1)
     plt.gca().invert_yaxis()
-    # ax.gca().invert_yaxis()
-    plt.show()
+    plt.title("[Weg Graph] | Displacement")
+    plt.xlabel("t/s")
+    plt.ylabel("x/m")
+    plt.grid()
+
+    plt.figure(2)
+    plt.title("[Beschleunigung] | Acceleration")
+    plt.xlabel("t/s")
+    plt.ylabel("a/m^-2")
+    plt.grid()
+
+    plt.figure(3)
+    plt.title("[Geschwindigkeit] | Velocity")
+    plt.xlabel("t/s")
+    plt.ylabel("v/m-1")
+    plt.grid()
+    
 
 
     
-        
+    plt.show()
+
+# def accGraph(frame):
+#     xs = []
+#     ys = []
+#     fig = plt.figure()
+#     # ax = fig.add_subplot(1, 1, 1)
+#     ax = plt.axes(xlim=(0, 30), ylim=(10, 20))
+#     displacement, = ax.plot([], [], 'r-', label="Displacement")
+#     ''' a = -w^2*x
+#     for acceleration we need position and time
+#     '''
+#     acceleration, = ax.plot([], [], 'b-', label="Acceleration")
+#     ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), shadow=True, ncol=3)
+
+#     ays = []
+#     t = 0.722
+#     f = 1/t
+#     w = 2*np.pi*f
+#     amplitude = 3.32 # [TODO] Determine this value by passing file.txt with later amplitude (px)
+#     # w_def = 8.6664
+
+
 
 if __name__ == '__main__':
     main()
